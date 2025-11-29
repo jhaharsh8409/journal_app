@@ -55,4 +55,19 @@ class HomeBackend {
       rethrow;
     }
   }
+
+  // Function to calculate total Pnl
+  double calculateTotalPnl(List<QueryDocumentSnapshot> trades) {
+    double totalPnl = 0;
+    for (var trade in trades) {
+      final amount = trade['amount'] as double;
+      final outcome = trade['tradeOutcome'] as String;
+      if (outcome == 'Profit') {
+        totalPnl += amount;
+      } else {
+        totalPnl -= amount;
+      }
+    }
+    return totalPnl;
+  }
 }

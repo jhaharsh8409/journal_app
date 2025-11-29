@@ -8,9 +8,35 @@ class PnlChart extends StatelessWidget {
 
   const PnlChart({super.key, required this.trades});
 
+  Widget _buildMessageContainer(String message) {
+    return AspectRatio(
+      aspectRatio: 1.7,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(18)),
+          color: const Color(0xff232d3b).withOpacity(0.5),
+        ),
+        child: Center(
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Reverse the list to show chronological order
+    if (trades.isEmpty) {
+      return _buildMessageContainer('No trade data available to display chart.');
+    }
+
+    if (trades.length < 2) {
+      return _buildMessageContainer('Add at least one more trade to see a chart.');
+    }
+
     final reversedTrades = trades.reversed.toList();
 
     List<FlSpot> spots = [];
@@ -29,26 +55,32 @@ class PnlChart extends StatelessWidget {
         cumulativePnl -= amount;
       }
 
-      if (cumulativePnl < minY) {
+      if (i == 0) {
         minY = cumulativePnl;
-      }
-      if (cumulativePnl > maxY) {
         maxY = cumulativePnl;
+      } else {
+        if (cumulativePnl < minY) {
+          minY = cumulativePnl;
+        }
+        if (cumulativePnl > maxY) {
+          maxY = cumulativePnl;
+        }
       }
 
       spots.add(FlSpot(i.toDouble(), cumulativePnl));
     }
 
-    // Add some padding to min and max Y
-    final padding = (maxY - minY).abs() * 0.2;
-    minY -= padding;
-    maxY += padding;
+    final paddingY = (maxY - minY).abs() * 0.2;
+    minY -= paddingY;
+    maxY += paddingY;
 
-    // Handle case where minY and maxY are the same or there's only one trade
-    if (spots.length <= 1 || minY == maxY) {
-      minY -= 100; // Default padding
+    if (minY == maxY) {
+      minY -= 100;
       maxY += 100;
     }
+
+    double minX = 0;
+    double maxX = (reversedTrades.length - 1).toDouble();
 
     return AspectRatio(
       aspectRatio: 1.7,
@@ -85,8 +117,8 @@ class PnlChart extends StatelessWidget {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: true,
-                horizontalInterval: (maxY - minY) / 4,
-                verticalInterval: (reversedTrades.length -1) / 4,
+                horizontalInterval: (maxY - minY) > 0 ? (maxY - minY) / 4 : 1,
+                verticalInterval: maxX > 0 ? maxX / 4 : 1,
                 getDrawingHorizontalLine: (value) {
                   return const FlLine(
                     color: Color(0xff37434d),
@@ -108,10 +140,18 @@ class PnlChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 35,
+                    reservedSize: 40,
                     getTitlesWidget: (value, meta) {
-                       final format = NumberFormat.compact();
-                      return Text(format.format(value), style: const TextStyle(color: Color(0xff68737d), fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.left);
+                      final format = NumberFormat.compact();
+                      return Text(
+                        format.format(value),
+                        style: const TextStyle(
+                          color: Color(0xff68737d),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.left,
+                      );
                     },
                   ),
                 ),
@@ -120,8 +160,8 @@ class PnlChart extends StatelessWidget {
                 show: true,
                 border: Border.all(color: const Color(0xff37434d)),
               ),
-              minX: 0,
-              maxX: (reversedTrades.length - 1).toDouble(),
+              minX: minX,
+              maxX: maxX,
               minY: minY,
               maxY: maxY,
               lineBarsData: [
@@ -137,7 +177,10 @@ class PnlChart extends StatelessWidget {
                   belowBarData: BarAreaData(
                     show: true,
                     gradient: LinearGradient(
-                      colors: [const Color(0xff23b6e6).withOpacity(0.3), const Color(0xff02d39a).withOpacity(0.3)],
+                      colors: [
+                        const Color(0xff23b6e6).withOpacity(0.3),
+                        const Color(0xff02d39a).withOpacity(0.3),
+                      ],
                     ),
                   ),
                 ),

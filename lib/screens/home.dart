@@ -6,6 +6,7 @@ import 'package:journal/components/add_trade_dialog.dart';
 import 'package:journal/components/logout_button.dart';
 import 'package:journal/components/pnl_chart.dart';
 import 'package:journal/components/trade_card.dart';
+import 'package:journal/screens/all_trades_screen.dart';
 import 'package:journal/utils/colors.dart';
 
 class home_page extends StatefulWidget {
@@ -93,50 +94,80 @@ class _home_pageState extends State<home_page> {
                     }
 
                     final trades = snapshot.data!.docs;
-                    double totalPnl = 0;
-                    trades.forEach((trade) {
-                      final amount = trade['amount'] as double;
-                      final outcome = trade['tradeOutcome'] as String;
-                      if (outcome == 'Profit') {
-                        totalPnl += amount;
-                      } else {
-                        totalPnl -= amount;
-                      }
-                    });
+                    final totalPnl = _backend.calculateTotalPnl(trades);
+                    final recentTrades = trades.take(3).toList();
 
                     return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Current PnL: \$${totalPnl.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: totalPnl >= 0 ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ),
                         PnlChart(trades: trades),
                         const SizedBox(height: 10),
-
+                        Text(
+                          'Current PnL: \$${totalPnl.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: totalPnl >= 0 ? Colors.green : Colors.red,
+                          ),
+                        ),
                         const SizedBox(height: 20),
+                        const Text(
+                          'Recent Trades',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
                         Expanded(
-                          child: ListView.builder(
-                            itemCount: trades.length,
-                            itemBuilder: (context, index) {
-                              var trade = trades[index];
-                              return TradeCard(
-                                tradeId: trade.id,
-                                symbol: trade['symbol'],
-                                positionType: trade['positionType'],
-                                amount: trade['amount'],
-                                date: (trade['date'] as Timestamp).toDate(),
-                                notes: trade['notes'],
-                                tradeOutcome: trade['tradeOutcome'],
-                                backend: _backend,
-                              );
-                            },
+                          child: Stack(
+                            children: [
+                              ListView.builder(
+                                itemCount: recentTrades.length,
+                                itemBuilder: (context, index) {
+                                  var trade = recentTrades[index];
+                                  return TradeCard(
+                                    key: ValueKey(trade.id), // THE FIX
+                                    tradeId: trade.id,
+                                    symbol: trade['symbol'],
+                                    positionType: trade['positionType'],
+                                    amount: trade['amount'],
+                                    date: (trade['date'] as Timestamp).toDate(),
+                                    notes: trade['notes'],
+                                    tradeOutcome: trade['tradeOutcome'],
+                                    backend: _backend,
+                                  );
+                                },
+                              ),
+                              if (trades.length > 3)
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Theme.of(context).scaffoldBackgroundColor.withOpacity(0.0),
+                                          Theme.of(context).scaffoldBackgroundColor,
+                                        ],
+                                        stops: const [0.0, 0.8],
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: TextButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => AllTradesScreen()),
+                                          );
+                                        },
+                                        child: const Text('View All'),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         logout_button()
