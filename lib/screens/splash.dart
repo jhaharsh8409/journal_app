@@ -26,15 +26,15 @@ class splash_screen extends StatelessWidget {
     }
 
     _navigate();
-    return const Scaffold(
+    return Scaffold(
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              FlutterLogo(size: 80),
-              SizedBox(height: 40),
-              Text("Hi this is a demo text"),
+              Expanded(child: Center(
+                child: Image.asset("assets/icon/icon.png", height: 200, width: 200),
+              ))
             ],
           ),
         ),

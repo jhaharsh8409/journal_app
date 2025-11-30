@@ -19,7 +19,7 @@ class auth_login extends StatelessWidget {
               children: [
                 Padding(
                   padding: EdgeInsets.all(screenWidth * 0.03),
-                  child: Lottie.asset('lib/assets/Welcome.json', height: screenHeight * 0.4),
+                  child: Lottie.asset('assets/Welcome.json', height: screenHeight * 0.4),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),

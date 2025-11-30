@@ -101,7 +101,7 @@ class _user_dropdownState extends State<user_dropdown> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: ColorHelper.colors[9],
+              color: ColorHelper.grey_100,
               border: BoxBorder.all(color: ColorHelper.colors[9]),
               borderRadius: BorderRadius.circular(screenWidth * 0.025),
             ),

@@ -1,3 +1,4 @@
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -28,6 +29,12 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
   final TextEditingController _notesController = TextEditingController();
   bool _isLoading = false;
 
+  // State variables for validation
+  bool _symbolHasError = false;
+  bool _positionTypeHasError = false;
+  bool _tradeOutcomeHasError = false;
+  bool _amountHasError = false;
+
   // Function to show the date picker
   Future<void> _selectDate(BuildContext context, StateSetter setState) async {
     final DateTime? picked = await showDatePicker(
@@ -43,11 +50,17 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
     }
   }
 
-  Future<void> _saveTrade() async {
-    if (_symbol == null || _positionType == null || _tradeOutcome == null || _amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields.')),
-      );
+  Future<void> _saveTrade(StateSetter setState) async {
+    setState(() {
+      _symbolHasError = _symbol == null;
+      _positionTypeHasError = _positionType == null;
+      _tradeOutcomeHasError = _tradeOutcome == null;
+      _amountHasError = _amountController.text.isEmpty;
+    });
+
+    final bool hasError = _symbolHasError || _positionTypeHasError || _tradeOutcomeHasError || _amountHasError;
+
+    if (hasError) {
       return;
     }
 
@@ -66,18 +79,54 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
       );
 
       Navigator.of(context).pop(); // Close the dialog on success
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Trade added successfully!')),
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Woo ho !',
+          message: 'New Trade Added Successfully !',
+          contentType: ContentType.success,
+        ),
       );
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(snackBar);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add trade: $e')),
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'On Snap!',
+          message: 'Failed to add new trade! Contact Developer',
+          contentType: ContentType.failure,
+        ),
       );
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(snackBar);
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  void _resetDialogState() {
+    _symbol = null;
+    _selectedDate = DateTime.now();
+    _positionType = null;
+    _tradeOutcome = null;
+    _amountController.clear();
+    _notesController.clear();
+    _isLoading = false;
+    _symbolHasError = false;
+    _positionTypeHasError = false;
+    _tradeOutcomeHasError = false;
+    _amountHasError = false;
   }
 
   @override
@@ -91,6 +140,7 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
+        _resetDialogState();
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -122,8 +172,9 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(horizontal: widget.screenWidth * 0.03, vertical: widget.screenHeight * 0.005),
                         decoration: BoxDecoration(
-                          color: ColorHelper.colors[9],
+                          color: ColorHelper.grey_100,
                           borderRadius: BorderRadius.circular(widget.screenWidth * 0.025),
+                          border: _symbolHasError ? Border.all(color: ColorHelper.red_700, width: 1.5) : null,
                         ),
                         child: DropdownButton<String>(
                           value: _symbol,
@@ -131,7 +182,10 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
                           underline: const SizedBox(),
                           hint: Text("Select Symbol", style: TextStyle(fontSize: widget.screenWidth * 0.04)),
                           onChanged: (String? newValue) {
-                            setState(() => _symbol = newValue);
+                            setState(() {
+                              _symbol = newValue;
+                              _symbolHasError = false;
+                            });
                           },
                           items: _symbols.map<DropdownMenuItem<String>>((String value) {
                             return DropdownMenuItem<String>(value: value, child: Text(value, style: TextStyle(fontSize: widget.screenWidth * 0.04)));
@@ -141,62 +195,108 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
                       SizedBox(height: widget.screenHeight * 0.02),
 
                       // --- POSITION TYPE ---
-                      Text("Position Type", style: TextStyle(fontSize: widget.screenWidth * 0.04)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: Text('Long', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
-                              value: 'Long',
-                              groupValue: _positionType,
-                              onChanged: (value) => setState(() => _positionType = value),
-                              contentPadding: EdgeInsets.zero,
+                      Container(
+                        padding: _positionTypeHasError ? const EdgeInsets.all(8) : EdgeInsets.zero,
+                        decoration: _positionTypeHasError
+                            ? BoxDecoration(
+                                border: Border.all(color: ColorHelper.red_700, width: 1.5),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Position Type", style: TextStyle(fontSize: widget.screenWidth * 0.04)),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RadioListTile<String>(
+                                    title: Text('Long', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
+                                    value: 'Long',
+                                    groupValue: _positionType,
+                                    onChanged: (value) => setState(() {
+                                      _positionType = value;
+                                      _positionTypeHasError = false;
+                                    }),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: RadioListTile<String>(
+                                    title: Text('Short', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
+                                    value: 'Short',
+                                    groupValue: _positionType,
+                                    onChanged: (value) => setState(() {
+                                      _positionType = value;
+                                      _positionTypeHasError = false;
+                                    }),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: Text('Short', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
-                              value: 'Short',
-                              groupValue: _positionType,
-                              onChanged: (value) => setState(() => _positionType = value),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       SizedBox(height: widget.screenHeight * 0.01),
 
                       // --- PROFIT/LOSS ---
-                      Text("Outcome", style: TextStyle(fontSize: widget.screenWidth * 0.04)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: Text('Profit', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
-                              value: 'Profit',
-                              groupValue: _tradeOutcome,
-                              onChanged: (value) => setState(() => _tradeOutcome = value),
-                              contentPadding: EdgeInsets.zero,
+                      Container(
+                        padding: _tradeOutcomeHasError ? const EdgeInsets.all(8) : EdgeInsets.zero,
+                        decoration: _tradeOutcomeHasError
+                            ? BoxDecoration(
+                                border: Border.all(color: ColorHelper.red_700, width: 1.5),
+                                borderRadius: BorderRadius.circular(8),
+                              )
+                            : null,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Outcome", style: TextStyle(fontSize: widget.screenWidth * 0.04)),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RadioListTile<String>(
+                                    title: Text('Profit', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
+                                    value: 'Profit',
+                                    groupValue: _tradeOutcome,
+                                    onChanged: (value) => setState(() {
+                                      _tradeOutcome = value;
+                                      _tradeOutcomeHasError = false;
+                                    }),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: RadioListTile<String>(
+                                    title: Text('Loss', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
+                                    value: 'Loss',
+                                    groupValue: _tradeOutcome,
+                                    onChanged: (value) => setState(() {
+                                      _tradeOutcome = value;
+                                      _tradeOutcomeHasError = false;
+                                    }),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: Text('Loss', style: TextStyle(fontSize: widget.screenWidth * 0.035)),
-                              value: 'Loss',
-                              groupValue: _tradeOutcome,
-                              onChanged: (value) => setState(() => _tradeOutcome = value),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       TextFormField(
                         controller: _amountController,
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (value) {
+                          if (value.isNotEmpty && _amountHasError) {
+                            setState(() => _amountHasError = false);
+                          }
+                        },
                         decoration: InputDecoration(
                           hintText: 'Enter Amount in \$',
                           isDense: true,
                           hintStyle: TextStyle(fontSize: widget.screenWidth * 0.04),
+                          errorText: _amountHasError ? 'Please enter an amount' : null,
                         ),
                         style: TextStyle(fontSize: widget.screenWidth * 0.04),
                       ),
@@ -227,7 +327,7 @@ class _add_trade_dialogState extends State<add_trade_dialog> {
                       ? const CircularProgressIndicator()
                       : TextButton(
                           child: const Text('Save'),
-                          onPressed: _saveTrade,
+                          onPressed: () => _saveTrade(setState),
                         ),
                 ],
               );
